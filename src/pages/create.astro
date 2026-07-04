@@ -41,41 +41,47 @@ import { SITE_TITLE } from '../consts';
 						placeholder="여기에 글을 작성하세요&#10;&#10;## 소제목&#10;**굵게**, *기울임*, `코드` 등 마크다운 문법을 쓸 수 있습니다.&#10;&#10;https://youtu.be/영상주소 ← 이렇게 한 줄에 넣으면 영상이 임베드됩니다."
 					></textarea>
 				</label>
-				<input type="file" id="image-file" accept="image/*" hidden />
-				<button type="submit">발행하기</button>
+				<label>
+					발행 비밀번호
+					<input type="password" name="password" placeholder="배포된 사이트에서 발행할 때 필요해요" />
+				</label>
+				<input type="file" id="image-picker" accept="image/*" hidden />
+				<input type="file" name="images" id="images-store" multiple hidden />
+				<button type="submit" id="publish">발행하기</button>
 			</form>
 		</main>
 		<Footer />
 		<script>
 			const insertButton = document.getElementById('insert-image') as HTMLButtonElement;
-			const fileInput = document.getElementById('image-file') as HTMLInputElement;
+			const picker = document.getElementById('image-picker') as HTMLInputElement;
+			const store = document.getElementById('images-store') as HTMLInputElement;
 			const textarea = document.getElementById('body') as HTMLTextAreaElement;
+			const publishButton = document.getElementById('publish') as HTMLButtonElement;
+			const form = document.querySelector('form') as HTMLFormElement;
 
-			insertButton.addEventListener('click', () => fileInput.click());
+			// 선택한 이미지는 폼과 함께 전송되고, 본문에는 (첨부:N) 자리표시자가 들어간다.
+			// 서버가 발행할 때 실제 이미지 주소로 바꿔준다.
+			const pending = new DataTransfer();
 
-			fileInput.addEventListener('change', async () => {
-				const file = fileInput.files?.[0];
+			insertButton.addEventListener('click', () => picker.click());
+
+			picker.addEventListener('change', () => {
+				const file = picker.files?.[0];
 				if (!file) return;
-				insertButton.disabled = true;
-				insertButton.textContent = '⏳ 업로드 중...';
-				try {
-					const data = new FormData();
-					data.append('image', file);
-					const res = await fetch('/api/upload-image', { method: 'POST', body: data });
-					if (!res.ok) throw new Error(await res.text());
-					const { url } = await res.json();
-					const snippet = `\n![이미지 설명](${url})\n`;
-					const pos = textarea.selectionStart ?? textarea.value.length;
-					textarea.value = textarea.value.slice(0, pos) + snippet + textarea.value.slice(pos);
-					textarea.focus();
-					textarea.selectionStart = textarea.selectionEnd = pos + snippet.length;
-				} catch (err) {
-					alert(`이미지 업로드 실패: ${err instanceof Error ? err.message : err}`);
-				} finally {
-					insertButton.disabled = false;
-					insertButton.textContent = '🖼️ 이미지 넣기';
-					fileInput.value = '';
-				}
+				pending.items.add(file);
+				store.files = pending.files;
+
+				const snippet = `\n![이미지 설명](첨부:${pending.items.length})\n`;
+				const pos = textarea.selectionStart ?? textarea.value.length;
+				textarea.value = textarea.value.slice(0, pos) + snippet + textarea.value.slice(pos);
+				textarea.focus();
+				textarea.selectionStart = textarea.selectionEnd = pos + snippet.length;
+				picker.value = '';
+			});
+
+			form.addEventListener('submit', () => {
+				publishButton.disabled = true;
+				publishButton.textContent = '⏳ 발행 중...';
 			});
 		</script>
 		<style>
@@ -148,6 +154,10 @@ import { SITE_TITLE } from '../consts';
 			}
 			button[type='submit']:hover {
 				background: var(--accent-dark);
+			}
+			button[type='submit']:disabled {
+				opacity: 0.6;
+				cursor: wait;
 			}
 		</style>
 	</body>
