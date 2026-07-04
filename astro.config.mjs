@@ -60,5 +60,9 @@ export default defineConfig({
       },
 	],
 
+  // 파이는 Tailscale Funnel이 HTTPS를 받아 HTTP로 넘겨주므로 origin 검사(CSRF)가
+  // 항상 실패해 폼 발행이 403으로 막힌다. 발행은 비밀번호로 보호되므로 꺼도 안전.
+  security: { checkOrigin: !isPi },
+
   adapter: isPi ? node({ mode: 'standalone' }) : netlify(),
 });
