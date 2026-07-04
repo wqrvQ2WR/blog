@@ -75,5 +75,6 @@ export function renderPostHtml(post: LivePost): string {
 	const body = post.file.endsWith('.mdx')
 		? post.body.replace(/^(import|export)\s.*$/gm, '')
 		: post.body;
-	return marked.parse(applyEmbeds(body), { async: false }) as string;
+	// breaks: 본문에서 엔터 한 번도 줄바꿈으로 보이게 한다.
+	return marked.parse(applyEmbeds(body), { async: false, breaks: true }) as string;
 }
