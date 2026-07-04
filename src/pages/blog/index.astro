@@ -139,7 +139,7 @@ const posts = (await getLivePosts()).reverse();
 					<input
 						type="search"
 						id="search-input"
-						placeholder="글 검색 (제목·설명·본문)"
+						placeholder="글 검색 (제목)"
 						autocomplete="off"
 					/>
 				</div>
@@ -176,15 +176,9 @@ const posts = (await getLivePosts()).reverse();
 			const list = document.getElementById('post-list')!;
 			const noResults = document.getElementById('no-results')!;
 			const items = [...list.querySelectorAll<HTMLLIElement>('li[data-num]')];
+			const titles = items.map((li) => li.querySelector('.title')!.textContent!.toLowerCase());
 
-			type IndexEntry = { num: number; title: string; description: string; body: string };
-			let indexPromise: Promise<IndexEntry[]> | undefined;
-			function loadIndex() {
-				indexPromise ??= fetch('/search.json').then((r) => r.json());
-				return indexPromise;
-			}
-
-			input.addEventListener('input', async () => {
+			input.addEventListener('input', () => {
 				const query = input.value.trim().toLowerCase();
 				if (!query) {
 					list.classList.remove('searching');
@@ -192,23 +186,13 @@ const posts = (await getLivePosts()).reverse();
 					noResults.hidden = true;
 					return;
 				}
-				const index = await loadIndex();
-				// 인덱스 로딩 중 입력이 바뀌었으면 이 결과는 버린다.
-				if (input.value.trim().toLowerCase() !== query) return;
-				const matched = new Set(
-					index
-						.filter((p) =>
-							`${p.title}\n${p.description}\n${p.body}`.toLowerCase().includes(query),
-						)
-						.map((p) => p.num),
-				);
 				list.classList.add('searching');
 				let count = 0;
-				for (const li of items) {
-					const show = matched.has(Number(li.dataset.num));
+				items.forEach((li, i) => {
+					const show = titles[i].includes(query);
 					li.hidden = !show;
 					if (show) count++;
-				}
+				});
 				noResults.hidden = count > 0;
 			});
 		</script>
