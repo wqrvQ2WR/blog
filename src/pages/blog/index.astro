@@ -30,6 +30,37 @@ const posts = (await getLivePosts()).reverse();
 			main {
 				width: 960px;
 			}
+			.search {
+				margin-bottom: 2rem;
+			}
+			.search input {
+				width: 100%;
+				padding: 0.6em 1em;
+				font-size: 1em;
+				font-family: inherit;
+				color: rgb(var(--black));
+				border: 1px solid rgb(var(--gray-light));
+				border-radius: 8px;
+				box-sizing: border-box;
+			}
+			.search input:focus {
+				outline: none;
+				border-color: var(--accent);
+			}
+			.no-results {
+				margin: 2rem 0;
+				text-align: center;
+				color: rgb(var(--gray));
+			}
+			/* 검색 중에는 첫 글 크게 보여주는 레이아웃을 풀어 균일하게 표시 */
+			ul.searching li:first-child {
+				width: calc(50% - 1rem);
+				margin-bottom: 0;
+				text-align: inherit;
+			}
+			ul.searching li:first-child .title {
+				font-size: inherit;
+			}
 			ul {
 				display: flex;
 				flex-wrap: wrap;
@@ -93,6 +124,10 @@ const posts = (await getLivePosts()).reverse();
 				ul li:first-child .title {
 					font-size: 1.563em;
 				}
+				ul.searching li:first-child {
+					width: 100%;
+					text-align: center;
+				}
 			}
 		</style>
 	</head>
@@ -100,12 +135,20 @@ const posts = (await getLivePosts()).reverse();
 		<Header />
 		<main>
 			<section>
-				<ul>
+				<div class="search">
+					<input
+						type="search"
+						id="search-input"
+						placeholder="글 검색 (제목·설명·본문)"
+						autocomplete="off"
+					/>
+				</div>
+				<ul id="post-list">
 					{
 						posts.map((post) => {
 							const hero = resolveHero(post.heroImage);
 							return (
-								<li>
+								<li data-num={post.num}>
 									<a href={`/${post.num}`}>
 										{
 											typeof hero === 'string' ? (
@@ -124,8 +167,50 @@ const posts = (await getLivePosts()).reverse();
 						})
 					}
 				</ul>
+				<p class="no-results" id="no-results" hidden>검색 결과가 없습니다.</p>
 			</section>
 		</main>
 		<Footer />
+		<script>
+			const input = document.getElementById('search-input') as HTMLInputElement;
+			const list = document.getElementById('post-list')!;
+			const noResults = document.getElementById('no-results')!;
+			const items = [...list.querySelectorAll<HTMLLIElement>('li[data-num]')];
+
+			type IndexEntry = { num: number; title: string; description: string; body: string };
+			let indexPromise: Promise<IndexEntry[]> | undefined;
+			function loadIndex() {
+				indexPromise ??= fetch('/search.json').then((r) => r.json());
+				return indexPromise;
+			}
+
+			input.addEventListener('input', async () => {
+				const query = input.value.trim().toLowerCase();
+				if (!query) {
+					list.classList.remove('searching');
+					items.forEach((li) => (li.hidden = false));
+					noResults.hidden = true;
+					return;
+				}
+				const index = await loadIndex();
+				// 인덱스 로딩 중 입력이 바뀌었으면 이 결과는 버린다.
+				if (input.value.trim().toLowerCase() !== query) return;
+				const matched = new Set(
+					index
+						.filter((p) =>
+							`${p.title}\n${p.description}\n${p.body}`.toLowerCase().includes(query),
+						)
+						.map((p) => p.num),
+				);
+				list.classList.add('searching');
+				let count = 0;
+				for (const li of items) {
+					const show = matched.has(Number(li.dataset.num));
+					li.hidden = !show;
+					if (show) count++;
+				}
+				noResults.hidden = count > 0;
+			});
+		</script>
 	</body>
 </html>

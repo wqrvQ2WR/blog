@@ -23,6 +23,7 @@ const livePosts = {
         (route.component.endsWith('/pages/[num].astro') ||
           route.component.endsWith('/pages/edit/[num].astro') ||
           route.component.endsWith('/pages/blog/index.astro') ||
+          route.component.endsWith('/pages/search.json.ts') ||
           route.component.endsWith('/pages/rss.xml.js'))
       ) {
         route.prerender = false;
