@@ -71,20 +71,49 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 			'',
 		].join('\n');
 
-	// ── 배포 환경: GitHub에 커밋 → Netlify가 자동 재배포 ──
-	if (import.meta.env.PROD) {
-		const token = process.env.BLOG_GITHUB_TOKEN;
-		const password = process.env.BLOG_PUBLISH_PASSWORD;
-		const repo = process.env.BLOG_REPO || 'wqrvQ2WR/blog';
+	// 디스크에 바로 저장 (개발 서버·자체 서버 공용). 글은 즉시 반영된다.
+	const publishLocal = async () => {
+		if (heroFile && heroUrl) {
+			await saveImageBuffer(path.basename(heroUrl), Buffer.from(await heroFile.arrayBuffer()));
+		}
+		for (const entry of imageEntries) {
+			await saveImageBuffer(path.basename(entry.url), Buffer.from(await entry.file.arrayBuffer()));
+		}
 
-		if (!token || !password) {
-			return new Response(
-				'서버에 BLOG_GITHUB_TOKEN / BLOG_PUBLISH_PASSWORD 환경변수가 설정되지 않았습니다.',
-				{ status: 500 },
-			);
+		const posts = await getLivePosts();
+		const nextNum = posts.length + 1;
+		let n = nextNum;
+		while (await existsLocal(path.join(BLOG_DIR, `post-${n}.md`))) n++;
+
+		await fs.writeFile(path.join(BLOG_DIR, `post-${n}.md`), makeMarkdown(), 'utf8');
+
+		return redirect(`/${nextNum}`, 303);
+	};
+
+	// ── 배포 환경: 비밀번호 확인 후 발행 ──
+	if (import.meta.env.PROD) {
+		const password = process.env.BLOG_PUBLISH_PASSWORD;
+		if (!password) {
+			return new Response('서버에 BLOG_PUBLISH_PASSWORD 환경변수가 설정되지 않았습니다.', {
+				status: 500,
+			});
 		}
 		if (String(form.get('password') ?? '') !== password) {
 			return new Response('비밀번호가 틀렸습니다.', { status: 401 });
+		}
+
+		// 라즈베리 파이 같은 자체 서버: 디스크에 바로 저장, 즉시 반영
+		if (process.env.BLOG_LOCAL_PUBLISH === '1') {
+			return publishLocal();
+		}
+
+		// Netlify: GitHub에 커밋 → 자동 재배포 (1~2분 뒤 반영)
+		const token = process.env.BLOG_GITHUB_TOKEN;
+		const repo = process.env.BLOG_REPO || 'wqrvQ2WR/blog';
+		if (!token) {
+			return new Response('서버에 BLOG_GITHUB_TOKEN 환경변수가 설정되지 않았습니다.', {
+				status: 500,
+			});
 		}
 
 		const nextNum = (await countPosts(repo, token)) + 1;
@@ -105,20 +134,6 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 		return publishedPage(nextNum);
 	}
 
-	// ── 개발 서버: 파일에 바로 저장 ──
-	if (heroFile && heroUrl) {
-		await saveImageBuffer(path.basename(heroUrl), Buffer.from(await heroFile.arrayBuffer()));
-	}
-	for (const entry of imageEntries) {
-		await saveImageBuffer(path.basename(entry.url), Buffer.from(await entry.file.arrayBuffer()));
-	}
-
-	const posts = await getLivePosts();
-	const nextNum = posts.length + 1;
-	let n = nextNum;
-	while (await existsLocal(path.join(BLOG_DIR, `post-${n}.md`))) n++;
-
-	await fs.writeFile(path.join(BLOG_DIR, `post-${n}.md`), makeMarkdown(), 'utf8');
-
-	return redirect(`/${nextNum}`, 303);
+	// ── 개발 서버: 비밀번호 없이 바로 저장 ──
+	return publishLocal();
 };
