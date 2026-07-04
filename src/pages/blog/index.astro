@@ -1,0 +1,131 @@
+---
+import type { ImageMetadata } from 'astro';
+import { Image } from 'astro:assets';
+import BaseHead from '../../components/BaseHead.astro';
+import Footer from '../../components/Footer.astro';
+import FormattedDate from '../../components/FormattedDate.astro';
+import Header from '../../components/Header.astro';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
+import { getLivePosts } from '../../lib/posts';
+
+const images = import.meta.glob<{ default: ImageMetadata }>('../../assets/*.{jpg,jpeg,png,webp}', {
+	eager: true,
+});
+function resolveHero(heroImage?: string) {
+	if (!heroImage) return undefined;
+	if (heroImage.startsWith('/')) return heroImage; // public/ 폴더 이미지 (업로드된 이미지)
+	const name = heroImage.split('/').pop();
+	return Object.entries(images).find(([key]) => key.endsWith(`/${name}`))?.[1].default;
+}
+
+// 작성 순서대로 번호가 붙어 있고, 목록은 최신 글부터 보여준다.
+const posts = (await getLivePosts()).reverse();
+---
+
+<!doctype html>
+<html lang="ko">
+	<head>
+		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
+		<style>
+			main {
+				width: 960px;
+			}
+			ul {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 2rem;
+				list-style-type: none;
+				margin: 0;
+				padding: 0;
+			}
+			ul li {
+				width: calc(50% - 1rem);
+			}
+			ul li * {
+				text-decoration: none;
+				transition: 0.2s ease;
+			}
+			ul li:first-child {
+				width: 100%;
+				margin-bottom: 1rem;
+				text-align: center;
+			}
+			ul li:first-child img {
+				width: 100%;
+			}
+			ul li:first-child .title {
+				font-size: 2.369rem;
+			}
+			ul li img {
+				margin-bottom: 0.5rem;
+				border-radius: 12px;
+			}
+			ul li a {
+				display: block;
+			}
+			.title {
+				margin: 0;
+				color: rgb(var(--black));
+				line-height: 1;
+			}
+			.date {
+				margin: 0;
+				color: rgb(var(--gray));
+			}
+			ul li a:hover h4,
+			ul li a:hover .date {
+				color: rgb(var(--accent));
+			}
+			ul a:hover img {
+				box-shadow: var(--box-shadow);
+			}
+			@media (max-width: 720px) {
+				ul {
+					gap: 0.5em;
+				}
+				ul li {
+					width: 100%;
+					text-align: center;
+				}
+				ul li:first-child {
+					margin-bottom: 0;
+				}
+				ul li:first-child .title {
+					font-size: 1.563em;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<Header />
+		<main>
+			<section>
+				<ul>
+					{
+						posts.map((post) => {
+							const hero = resolveHero(post.heroImage);
+							return (
+								<li>
+									<a href={`/${post.num}`}>
+										{
+											typeof hero === 'string' ? (
+												<img width="720" src={hero} alt="" />
+											) : (
+												hero && <Image width={720} height={360} src={hero} alt="" />
+											)
+										}
+										<h4 class="title">#{post.num} {post.title}</h4>
+										<p class="date">
+											<FormattedDate date={post.pubDate} />
+										</p>
+									</a>
+								</li>
+							);
+						})
+					}
+				</ul>
+			</section>
+		</main>
+		<Footer />
+	</body>
+</html>

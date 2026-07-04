@@ -1,0 +1,154 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
+import { SITE_TITLE } from '../consts';
+---
+
+<!doctype html>
+<html lang="ko">
+	<head>
+		<BaseHead title={`새 글 쓰기 | ${SITE_TITLE}`} description="새 블로그 글을 작성합니다." />
+	</head>
+	<body>
+		<Header />
+		<main>
+			<h1>새 글 쓰기</h1>
+			<form method="POST" action="/api/create-post" enctype="multipart/form-data">
+				<label>
+					제목
+					<input type="text" name="title" required placeholder="글 제목" />
+				</label>
+				<label>
+					설명 (선택)
+					<input type="text" name="description" placeholder="목록에 표시될 한 줄 요약" />
+				</label>
+				<label>
+					대표 이미지 (선택)
+					<input type="file" name="hero" accept="image/*" />
+				</label>
+				<label>
+					본문 (마크다운 지원)
+					<div class="toolbar">
+						<button type="button" id="insert-image">🖼️ 이미지 넣기</button>
+						<span class="hint">유튜브·치지직 링크를 한 줄에 붙여넣으면 영상이 자동으로 들어가요</span>
+					</div>
+					<textarea
+						name="body"
+						id="body"
+						required
+						rows="16"
+						placeholder="여기에 글을 작성하세요&#10;&#10;## 소제목&#10;**굵게**, *기울임*, `코드` 등 마크다운 문법을 쓸 수 있습니다.&#10;&#10;https://youtu.be/영상주소 ← 이렇게 한 줄에 넣으면 영상이 임베드됩니다."
+					></textarea>
+				</label>
+				<input type="file" id="image-file" accept="image/*" hidden />
+				<button type="submit">발행하기</button>
+			</form>
+		</main>
+		<Footer />
+		<script>
+			const insertButton = document.getElementById('insert-image') as HTMLButtonElement;
+			const fileInput = document.getElementById('image-file') as HTMLInputElement;
+			const textarea = document.getElementById('body') as HTMLTextAreaElement;
+
+			insertButton.addEventListener('click', () => fileInput.click());
+
+			fileInput.addEventListener('change', async () => {
+				const file = fileInput.files?.[0];
+				if (!file) return;
+				insertButton.disabled = true;
+				insertButton.textContent = '⏳ 업로드 중...';
+				try {
+					const data = new FormData();
+					data.append('image', file);
+					const res = await fetch('/api/upload-image', { method: 'POST', body: data });
+					if (!res.ok) throw new Error(await res.text());
+					const { url } = await res.json();
+					const snippet = `\n![이미지 설명](${url})\n`;
+					const pos = textarea.selectionStart ?? textarea.value.length;
+					textarea.value = textarea.value.slice(0, pos) + snippet + textarea.value.slice(pos);
+					textarea.focus();
+					textarea.selectionStart = textarea.selectionEnd = pos + snippet.length;
+				} catch (err) {
+					alert(`이미지 업로드 실패: ${err instanceof Error ? err.message : err}`);
+				} finally {
+					insertButton.disabled = false;
+					insertButton.textContent = '🖼️ 이미지 넣기';
+					fileInput.value = '';
+				}
+			});
+		</script>
+		<style>
+			form {
+				display: flex;
+				flex-direction: column;
+				gap: 1.5em;
+			}
+			label {
+				display: flex;
+				flex-direction: column;
+				gap: 0.5em;
+				font-weight: bold;
+			}
+			input,
+			textarea {
+				font: inherit;
+				font-weight: normal;
+				padding: 0.6em 0.8em;
+				border: 1px solid rgb(var(--gray-light));
+				border-radius: 8px;
+			}
+			input[type='file'] {
+				border-style: dashed;
+			}
+			input:focus,
+			textarea:focus {
+				outline: 2px solid var(--accent);
+				border-color: transparent;
+			}
+			textarea {
+				resize: vertical;
+				line-height: 1.6;
+			}
+			.toolbar {
+				display: flex;
+				align-items: center;
+				gap: 1em;
+				flex-wrap: wrap;
+			}
+			.toolbar button {
+				font: inherit;
+				font-size: 0.9em;
+				font-weight: normal;
+				padding: 0.4em 1em;
+				border: 1px solid rgb(var(--gray-light));
+				border-radius: 8px;
+				background: white;
+				cursor: pointer;
+			}
+			.toolbar button:hover {
+				border-color: var(--accent);
+				color: var(--accent);
+			}
+			.hint {
+				font-size: 0.8em;
+				font-weight: normal;
+				color: rgb(var(--gray));
+			}
+			button[type='submit'] {
+				align-self: flex-start;
+				font: inherit;
+				font-weight: bold;
+				color: white;
+				background: var(--accent);
+				border: none;
+				border-radius: 8px;
+				padding: 0.7em 2em;
+				cursor: pointer;
+			}
+			button[type='submit']:hover {
+				background: var(--accent-dark);
+			}
+		</style>
+	</body>
+</html>
