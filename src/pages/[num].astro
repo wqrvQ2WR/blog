@@ -65,6 +65,19 @@ const next = posts[num];
 			)
 		}
 	</nav>
+
+	<details class="delete-post">
+		<summary>이 글 삭제하기</summary>
+		<form
+			method="POST"
+			action="/api/delete-post"
+			onsubmit="return confirm('정말 삭제할까요? 되돌릴 수 없습니다.')"
+		>
+			<input type="hidden" name="file" value={post.file} />
+			<input type="password" name="password" placeholder="발행 비밀번호" required />
+			<button type="submit">삭제</button>
+		</form>
+	</details>
 </BlogPost>
 
 <style>
@@ -118,6 +131,40 @@ const next = posts[num];
 		justify-content: center;
 		font-weight: bold;
 		white-space: nowrap;
+	}
+	.delete-post {
+		margin-top: 2em;
+		font-size: 0.85em;
+		color: rgb(var(--gray));
+	}
+	.delete-post summary {
+		cursor: pointer;
+		width: fit-content;
+	}
+	.delete-post form {
+		display: flex;
+		gap: 0.5em;
+		margin-top: 0.8em;
+	}
+	.delete-post input {
+		font: inherit;
+		padding: 0.4em 0.6em;
+		border: 1px solid rgb(var(--gray-light));
+		border-radius: 6px;
+		min-width: 0;
+	}
+	.delete-post button {
+		font: inherit;
+		padding: 0.4em 1em;
+		border: 1px solid #d33;
+		border-radius: 6px;
+		background: white;
+		color: #d33;
+		cursor: pointer;
+	}
+	.delete-post button:hover {
+		background: #d33;
+		color: white;
 	}
 	@media (max-width: 720px) {
 		.post-nav {
