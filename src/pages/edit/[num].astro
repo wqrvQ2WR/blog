@@ -1,0 +1,198 @@
+---
+import BaseHead from '../../components/BaseHead.astro';
+import Footer from '../../components/Footer.astro';
+import Header from '../../components/Header.astro';
+import { SITE_TITLE } from '../../consts';
+import { getLivePosts } from '../../lib/posts';
+
+// 배포 빌드에서는 정적 생성, 개발 서버·자체 서버(pi)에서는
+// astro.config.mjs 의 live-posts 훅이 요청 시 렌더링으로 전환한다.
+export async function getStaticPaths() {
+	const allPosts = await getLivePosts();
+	return allPosts.map((p) => ({ params: { num: String(p.num) } }));
+}
+
+const num = Number(Astro.params.num);
+const posts = await getLivePosts();
+const post = Number.isInteger(num) && num >= 1 ? posts[num - 1] : undefined;
+
+if (!post) {
+	return new Response('글을 찾을 수 없습니다.', { status: 404 });
+}
+---
+
+<!doctype html>
+<html lang="ko">
+	<head>
+		<BaseHead title={`글 수정 | ${SITE_TITLE}`} description="블로그 글을 수정합니다." />
+	</head>
+	<body>
+		<Header />
+		<main>
+			<h1>글 수정</h1>
+			<form method="POST" action="/api/edit-post" enctype="multipart/form-data">
+				<input type="hidden" name="file" value={post.file} />
+				<label>
+					제목
+					<input type="text" name="title" required value={post.title} />
+				</label>
+				<label>
+					설명 (선택)
+					<input
+						type="text"
+						name="description"
+						value={post.description === post.title ? '' : post.description}
+						placeholder="목록에 표시될 한 줄 요약"
+					/>
+				</label>
+				<label>
+					대표 이미지 {post.heroImage ? '(새로 올리면 교체돼요)' : '(선택)'}
+					<input type="file" name="hero" accept="image/*" />
+				</label>
+				{
+					post.heroImage && (
+						<label class="inline">
+							<input type="checkbox" name="removeHero" value="1" />
+							기존 대표 이미지 삭제
+						</label>
+					)
+				}
+				<label>
+					본문 (마크다운 지원)
+					<div class="toolbar">
+						<button type="button" id="insert-image">🖼️ 이미지 넣기</button>
+						<span class="hint">유튜브·치지직 링크를 한 줄에 붙여넣으면 영상이 자동으로 들어가요</span>
+					</div>
+					<textarea name="body" id="body" required rows="16">{post.body.trim()}</textarea>
+				</label>
+				<label>
+					발행 비밀번호
+					<input type="password" name="password" placeholder="발행할 때 쓰는 비밀번호" />
+				</label>
+				<input type="file" id="image-picker" accept="image/*" hidden />
+				<input type="file" name="images" id="images-store" multiple hidden />
+				<button type="submit" id="publish">수정하기</button>
+			</form>
+		</main>
+		<Footer />
+		<script>
+			const insertButton = document.getElementById('insert-image') as HTMLButtonElement;
+			const picker = document.getElementById('image-picker') as HTMLInputElement;
+			const store = document.getElementById('images-store') as HTMLInputElement;
+			const textarea = document.getElementById('body') as HTMLTextAreaElement;
+			const publishButton = document.getElementById('publish') as HTMLButtonElement;
+			const form = document.querySelector('form') as HTMLFormElement;
+
+			// 새로 선택한 이미지는 폼과 함께 전송되고, 본문에는 (첨부:N) 자리표시자가 들어간다.
+			// 서버가 저장할 때 실제 이미지 주소로 바꿔준다.
+			const pending = new DataTransfer();
+
+			insertButton.addEventListener('click', () => picker.click());
+
+			picker.addEventListener('change', () => {
+				const file = picker.files?.[0];
+				if (!file) return;
+				pending.items.add(file);
+				store.files = pending.files;
+
+				const snippet = `\n![이미지 설명](첨부:${pending.items.length})\n`;
+				const pos = textarea.selectionStart ?? textarea.value.length;
+				textarea.value = textarea.value.slice(0, pos) + snippet + textarea.value.slice(pos);
+				textarea.focus();
+				textarea.selectionStart = textarea.selectionEnd = pos + snippet.length;
+				picker.value = '';
+			});
+
+			form.addEventListener('submit', () => {
+				publishButton.disabled = true;
+				publishButton.textContent = '⏳ 저장 중...';
+			});
+		</script>
+		<style>
+			form {
+				display: flex;
+				flex-direction: column;
+				gap: 1.5em;
+			}
+			label {
+				display: flex;
+				flex-direction: column;
+				gap: 0.5em;
+				font-weight: bold;
+			}
+			label.inline {
+				flex-direction: row;
+				align-items: center;
+				font-weight: normal;
+				font-size: 0.9em;
+				color: rgb(var(--gray));
+			}
+			input,
+			textarea {
+				font: inherit;
+				font-weight: normal;
+				padding: 0.6em 0.8em;
+				border: 1px solid rgb(var(--gray-light));
+				border-radius: 8px;
+			}
+			input[type='file'] {
+				border-style: dashed;
+			}
+			input[type='checkbox'] {
+				padding: 0;
+			}
+			input:focus,
+			textarea:focus {
+				outline: 2px solid var(--accent);
+				border-color: transparent;
+			}
+			textarea {
+				resize: vertical;
+				line-height: 1.6;
+			}
+			.toolbar {
+				display: flex;
+				align-items: center;
+				gap: 1em;
+				flex-wrap: wrap;
+			}
+			.toolbar button {
+				font: inherit;
+				font-size: 0.9em;
+				font-weight: normal;
+				padding: 0.4em 1em;
+				border: 1px solid rgb(var(--gray-light));
+				border-radius: 8px;
+				background: white;
+				cursor: pointer;
+			}
+			.toolbar button:hover {
+				border-color: var(--accent);
+				color: var(--accent);
+			}
+			.hint {
+				font-size: 0.8em;
+				font-weight: normal;
+				color: rgb(var(--gray));
+			}
+			button[type='submit'] {
+				align-self: flex-start;
+				font: inherit;
+				font-weight: bold;
+				color: white;
+				background: var(--accent);
+				border: none;
+				border-radius: 8px;
+				padding: 0.7em 2em;
+				cursor: pointer;
+			}
+			button[type='submit']:hover {
+				background: var(--accent-dark);
+			}
+			button[type='submit']:disabled {
+				opacity: 0.6;
+				cursor: wait;
+			}
+		</style>
+	</body>
+</html>

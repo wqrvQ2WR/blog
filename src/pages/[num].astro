@@ -66,6 +66,9 @@ const next = posts[num];
 		}
 	</nav>
 
+	<div class="post-admin">
+		<a href={`/edit/${post.num}`}>이 글 수정하기</a>
+	</div>
 	<details class="delete-post">
 		<summary>이 글 삭제하기</summary>
 		<form
@@ -132,8 +135,15 @@ const next = posts[num];
 		font-weight: bold;
 		white-space: nowrap;
 	}
-	.delete-post {
+	.post-admin {
 		margin-top: 2em;
+		font-size: 0.85em;
+	}
+	.post-admin a {
+		color: rgb(var(--gray));
+	}
+	.delete-post {
+		margin-top: 0.5em;
 		font-size: 0.85em;
 		color: rgb(var(--gray));
 	}

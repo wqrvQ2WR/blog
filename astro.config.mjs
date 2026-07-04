@@ -21,6 +21,7 @@ const livePosts = {
       if (
         (command === 'dev' || isPi) &&
         (route.component.endsWith('/pages/[num].astro') ||
+          route.component.endsWith('/pages/edit/[num].astro') ||
           route.component.endsWith('/pages/blog/index.astro') ||
           route.component.endsWith('/pages/rss.xml.js'))
       ) {
