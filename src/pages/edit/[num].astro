@@ -19,6 +19,8 @@ const post = Number.isInteger(num) && num >= 1 ? posts[num - 1] : undefined;
 if (!post) {
 	return new Response('글을 찾을 수 없습니다.', { status: 404 });
 }
+
+const categories = [...new Set(posts.map((p) => p.category).filter(Boolean))];
 ---
 
 <!doctype html>
@@ -44,6 +46,19 @@ if (!post) {
 						value={post.description === post.title ? '' : post.description}
 						placeholder="목록에 표시될 한 줄 요약"
 					/>
+				</label>
+				<label>
+					분류 (선택)
+					<input
+						type="text"
+						name="category"
+						list="category-list"
+						value={post.category ?? ''}
+						placeholder="예: 일상, 게임 — 새 분류를 입력하거나 기존 분류를 선택하세요"
+					/>
+					<datalist id="category-list">
+						{categories.map((c) => <option value={c} />)}
+					</datalist>
 				</label>
 				<label>
 					대표 이미지 {post.heroImage ? '(새로 올리면 교체돼요)' : '(선택)'}

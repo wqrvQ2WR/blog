@@ -3,6 +3,9 @@ import BaseHead from '../components/BaseHead.astro';
 import Footer from '../components/Footer.astro';
 import Header from '../components/Header.astro';
 import { SITE_TITLE } from '../consts';
+import { getLivePosts } from '../lib/posts';
+
+const categories = [...new Set((await getLivePosts()).map((p) => p.category).filter(Boolean))];
 ---
 
 <!doctype html>
@@ -22,6 +25,18 @@ import { SITE_TITLE } from '../consts';
 				<label>
 					설명 (선택)
 					<input type="text" name="description" placeholder="목록에 표시될 한 줄 요약" />
+				</label>
+				<label>
+					분류 (선택)
+					<input
+						type="text"
+						name="category"
+						list="category-list"
+						placeholder="예: 일상, 게임 — 새 분류를 입력하거나 기존 분류를 선택하세요"
+					/>
+					<datalist id="category-list">
+						{categories.map((c) => <option value={c} />)}
+					</datalist>
 				</label>
 				<label>
 					대표 이미지 (선택)

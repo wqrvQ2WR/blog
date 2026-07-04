@@ -26,6 +26,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 	const file = String(form.get('file') ?? '');
 	const title = String(form.get('title') ?? '').trim();
 	const description = String(form.get('description') ?? '').trim();
+	const category = String(form.get('category') ?? '').trim();
 	const body = String(form.get('body') ?? '').trim();
 
 	// 파일 이름만 허용 (경로 조작 방지)
@@ -86,6 +87,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 		`pubDate: ${JSON.stringify(post.pubDate.toISOString())}`,
 		`updatedDate: ${JSON.stringify(new Date().toISOString())}`,
 		...(heroUrl ? [`heroImage: ${JSON.stringify(heroUrl)}`] : []),
+		...(category ? [`category: ${JSON.stringify(category)}`] : []),
 		'---',
 		'',
 		finalBody,

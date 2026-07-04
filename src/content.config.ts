@@ -14,6 +14,7 @@ const blog = defineCollection({
 		updatedDate: z.coerce.date().optional(),
 		// src/assets 상대 경로 또는 /images/... (업로드된 이미지) 문자열
 		heroImage: z.string().optional(),
+		category: z.string().optional(),
 	}),
 });
 

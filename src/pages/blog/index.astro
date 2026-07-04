@@ -20,6 +20,7 @@ function resolveHero(heroImage?: string) {
 
 // 작성 순서대로 번호가 붙어 있고, 목록은 최신 글부터 보여준다.
 const posts = (await getLivePosts()).reverse();
+const categories = [...new Set(posts.map((p) => p.category).filter(Boolean))];
 ---
 
 <!doctype html>
@@ -46,6 +47,40 @@ const posts = (await getLivePosts()).reverse();
 			.search input:focus {
 				outline: none;
 				border-color: var(--accent);
+			}
+			.categories {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.5em;
+				margin-bottom: 2rem;
+			}
+			.categories button {
+				font: inherit;
+				font-size: 0.9em;
+				padding: 0.3em 1em;
+				border: 1px solid rgb(var(--gray-light));
+				border-radius: 999px;
+				background: white;
+				color: rgb(var(--gray-dark));
+				cursor: pointer;
+			}
+			.categories button:hover {
+				border-color: var(--accent);
+				color: var(--accent);
+			}
+			.categories button.active {
+				background: var(--accent);
+				border-color: var(--accent);
+				color: white;
+			}
+			.category-tag {
+				display: inline-block;
+				margin-left: 0.6em;
+				padding: 0.1em 0.7em;
+				font-size: 0.8em;
+				border: 1px solid rgb(var(--gray-light));
+				border-radius: 999px;
+				color: rgb(var(--gray));
 			}
 			.no-results {
 				margin: 2rem 0;
@@ -143,12 +178,26 @@ const posts = (await getLivePosts()).reverse();
 						autocomplete="off"
 					/>
 				</div>
+				{
+					categories.length > 0 && (
+						<div class="categories" id="category-filter">
+							<button type="button" class="active" data-category="">
+								전체
+							</button>
+							{categories.map((c) => (
+								<button type="button" data-category={c}>
+									{c}
+								</button>
+							))}
+						</div>
+					)
+				}
 				<ul id="post-list">
 					{
 						posts.map((post) => {
 							const hero = resolveHero(post.heroImage);
 							return (
-								<li data-num={post.num}>
+								<li data-num={post.num} data-category={post.category ?? ''}>
 									<a href={`/${post.num}`}>
 										{
 											typeof hero === 'string' ? (
@@ -160,6 +209,7 @@ const posts = (await getLivePosts()).reverse();
 										<h4 class="title">#{post.num} {post.title}</h4>
 										<p class="date">
 											<FormattedDate date={post.pubDate} />
+											{post.category && <span class="category-tag">{post.category}</span>}
 										</p>
 									</a>
 								</li>
@@ -177,10 +227,13 @@ const posts = (await getLivePosts()).reverse();
 			const noResults = document.getElementById('no-results')!;
 			const items = [...list.querySelectorAll<HTMLLIElement>('li[data-num]')];
 			const titles = items.map((li) => li.querySelector('.title')!.textContent!.toLowerCase());
+			const filterBar = document.getElementById('category-filter');
 
-			input.addEventListener('input', () => {
+			let activeCategory = '';
+
+			function applyFilters() {
 				const query = input.value.trim().toLowerCase();
-				if (!query) {
+				if (!query && !activeCategory) {
 					list.classList.remove('searching');
 					items.forEach((li) => (li.hidden = false));
 					noResults.hidden = true;
@@ -189,11 +242,23 @@ const posts = (await getLivePosts()).reverse();
 				list.classList.add('searching');
 				let count = 0;
 				items.forEach((li, i) => {
-					const show = titles[i].includes(query);
+					const show =
+						(!query || titles[i].includes(query)) &&
+						(!activeCategory || li.dataset.category === activeCategory);
 					li.hidden = !show;
 					if (show) count++;
 				});
 				noResults.hidden = count > 0;
+			}
+
+			input.addEventListener('input', applyFilters);
+
+			filterBar?.addEventListener('click', (e) => {
+				const button = (e.target as HTMLElement).closest('button');
+				if (!button) return;
+				activeCategory = button.dataset.category ?? '';
+				filterBar.querySelectorAll('button').forEach((b) => b.classList.toggle('active', b === button));
+				applyFilters();
 			});
 		</script>
 	</body>

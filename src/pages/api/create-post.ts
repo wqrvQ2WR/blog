@@ -39,6 +39,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 	const form = await request.formData();
 	const title = String(form.get('title') ?? '').trim();
 	const description = String(form.get('description') ?? '').trim();
+	const category = String(form.get('category') ?? '').trim();
 	const body = String(form.get('body') ?? '').trim();
 
 	if (!title || !body) {
@@ -65,6 +66,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 			`description: ${JSON.stringify(description || title)}`,
 			`pubDate: ${JSON.stringify(new Date().toISOString())}`,
 			...(heroUrl ? [`heroImage: ${JSON.stringify(heroUrl)}`] : []),
+			...(category ? [`category: ${JSON.stringify(category)}`] : []),
 			'---',
 			'',
 			finalBody,

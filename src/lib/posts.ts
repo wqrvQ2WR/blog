@@ -13,6 +13,7 @@ export interface LivePost {
 	pubDate: Date;
 	updatedDate?: Date;
 	heroImage?: string;
+	category?: string;
 	body: string;
 }
 
@@ -32,6 +33,7 @@ export async function getLivePosts(): Promise<LivePost[]> {
 				pubDate: new Date(data.pubDate),
 				updatedDate: data.updatedDate ? new Date(data.updatedDate) : undefined,
 				heroImage: data.heroImage ? String(data.heroImage) : undefined,
+				category: data.category ? String(data.category) : undefined,
 				body: content,
 			};
 		}),
