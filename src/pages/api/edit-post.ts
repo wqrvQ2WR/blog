@@ -3,6 +3,7 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { commitFiles, type FileToCommit } from '../../lib/github';
 import { newImageName, saveImageBuffer } from '../../lib/images';
 import { getLivePosts } from '../../lib/posts';
 
@@ -47,9 +48,6 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 		if (String(form.get('password') ?? '') !== password) {
 			return new Response('비밀번호가 틀렸습니다.', { status: 401 });
 		}
-		if (process.env.BLOG_LOCAL_PUBLISH !== '1') {
-			return new Response('이 서버에서는 글 수정을 지원하지 않습니다.', { status: 501 });
-		}
 	}
 
 	const posts = await getLivePosts();
@@ -58,23 +56,20 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 		return new Response('글을 찾을 수 없습니다.', { status: 404 });
 	}
 
-	// 새로 첨부한 이미지 저장 + (첨부:N) 자리표시자 치환
+	// 새로 첨부한 이미지는 (첨부:N) 자리표시자로 본문에 들어간다. 실제 저장은 아래
+	// 분기(로컬 디스크 vs GitHub 커밋)에서 각자 방식으로 처리한다.
 	const bodyImages = form.getAll('images').filter(isImageFile);
 	const imageEntries = bodyImages.map((f) => ({ file: f, url: `/images/${newImageName(f.name)}` }));
 	let finalBody = body;
 	imageEntries.forEach((entry, i) => {
 		finalBody = finalBody.split(`(첨부:${i + 1})`).join(`(${entry.url})`);
 	});
-	for (const entry of imageEntries) {
-		await saveImageBuffer(path.basename(entry.url), Buffer.from(await entry.file.arrayBuffer()));
-	}
 
 	// 대표 이미지: 새로 올리면 교체, '삭제' 체크하면 제거, 아니면 기존 유지
 	const hero = form.get('hero');
 	let heroUrl = post.heroImage;
 	if (isImageFile(hero)) {
 		heroUrl = `/images/${newImageName(hero.name)}`;
-		await saveImageBuffer(path.basename(heroUrl), Buffer.from(await hero.arrayBuffer()));
 	} else if (form.get('removeHero') === '1') {
 		heroUrl = undefined;
 	}
@@ -93,6 +88,35 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 		finalBody,
 		'',
 	].join('\n');
+
+	// Vercel 등 서버리스: GitHub에 커밋 → 자동 재배포 (1~2분 뒤 반영)
+	if (import.meta.env.PROD && process.env.BLOG_LOCAL_PUBLISH !== '1') {
+		const token = process.env.BLOG_GITHUB_TOKEN;
+		const repo = process.env.BLOG_REPO || 'wqrvQ2WR/blog';
+		if (!token) {
+			return new Response('서버에 BLOG_GITHUB_TOKEN 환경변수가 설정되지 않았습니다.', { status: 500 });
+		}
+		const files: FileToCommit[] = [{ path: `src/content/blog/${post.file}`, content: markdown }];
+		for (const entry of imageEntries) {
+			files.push({ path: `public${entry.url}`, content: Buffer.from(await entry.file.arrayBuffer()) });
+		}
+		if (isImageFile(hero)) {
+			files.push({ path: `public${heroUrl}`, content: Buffer.from(await hero.arrayBuffer()) });
+		}
+		// ponytail: 서버리스 경로에서는 더 안 쓰는 업로드 이미지 정리는 생략 (남아도 저장소 용량만 조금 씀). 필요해지면 로컬 경로처럼 uploadedImages diff로 delete 처리 추가.
+		await commitFiles(repo, token, `글 수정: ${title}`, files);
+		return new Response(
+			`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta http-equiv="refresh" content="90;url=/${post.num}"></head><body style="font-family:sans-serif;max-width:32em;margin:15vh auto;padding:0 1em;line-height:1.7;text-align:center"><h1>수정 완료!</h1><p>1~2분 뒤 <a href="/${post.num}">/${post.num}</a>에서 확인할 수 있어요.</p></body></html>`,
+			{ headers: { 'Content-Type': 'text/html; charset=utf-8' } },
+		);
+	}
+
+	for (const entry of imageEntries) {
+		await saveImageBuffer(path.basename(entry.url), Buffer.from(await entry.file.arrayBuffer()));
+	}
+	if (isImageFile(hero) && heroUrl) {
+		await saveImageBuffer(path.basename(heroUrl), Buffer.from(await hero.arrayBuffer()));
+	}
 
 	await fs.writeFile(path.join(BLOG_DIR, post.file), markdown, 'utf8');
 

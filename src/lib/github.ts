@@ -38,12 +38,13 @@ export async function fileExists(repo: string, token: string, path: string): Pro
 	return res.ok;
 }
 
-// 여러 파일을 하나의 커밋으로 main 브랜치에 올린다.
+// 여러 파일을 하나의 커밋으로 main 브랜치에 올린다. deletePaths로 지정한 경로는 함께 삭제된다.
 export async function commitFiles(
 	repo: string,
 	token: string,
 	message: string,
 	files: FileToCommit[],
+	deletePaths: string[] = [],
 ): Promise<void> {
 	const ref = await gh(token, `/repos/${repo}/git/ref/heads/main`);
 	const baseSha: string = ref.object.sha;
@@ -61,6 +62,9 @@ export async function commitFiles(
 			return { path: file.path, mode: '100644', type: 'blob', sha: blob.sha as string };
 		}),
 	);
+	for (const path of deletePaths) {
+		tree.push({ path, mode: '100644', type: 'blob', sha: null as unknown as string });
+	}
 
 	const newTree = await gh(token, `/repos/${repo}/git/trees`, {
 		method: 'POST',
