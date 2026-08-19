@@ -72,7 +72,7 @@ const categories = [...new Set(posts.map((p) => p.category).filter(Boolean))];
 						</label>
 					)
 				}
-				<label>
+				<label for="body">
 					본문 (마크다운 지원)
 					<div class="toolbar">
 						<button type="button" id="insert-image">🖼️ 이미지 넣기</button>
@@ -116,6 +116,15 @@ const categories = [...new Set(posts.map((p) => p.category).filter(Boolean))];
 				textarea.focus();
 				textarea.selectionStart = textarea.selectionEnd = pos + snippet.length;
 				picker.value = '';
+			});
+
+			// 제목 같은 한 줄 입력칸에서 엔터를 누르면 폼이 그대로 저장돼 버린다.
+			// 저장은 '수정하기' 버튼으로만 하도록 막는다. (본문 textarea의 엔터는 그대로 줄바꿈)
+			form.addEventListener('keydown', (event) => {
+				const target = event.target as HTMLElement;
+				if (event.key === 'Enter' && target instanceof HTMLInputElement) {
+					event.preventDefault();
+				}
 			});
 
 			form.addEventListener('submit', () => {
