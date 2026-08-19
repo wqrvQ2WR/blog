@@ -7,6 +7,8 @@ import { defineConfig, fontProviders } from 'astro/config';
 import netlify from '@astrojs/netlify';
 import node from '@astrojs/node';
 
+import vercel from '@astrojs/vercel';
+
 // DEPLOY_TARGET=pi 로 빌드하면 라즈베리 파이 등 자체 서버용(Node) 빌드가 된다.
 const isPi = process.env.DEPLOY_TARGET === 'pi';
 
@@ -60,11 +62,11 @@ export default defineConfig({
               ],
           },
       },
-	],
+    ],
 
   // 파이는 Tailscale Funnel이 HTTPS를 받아 HTTP로 넘겨주므로 origin 검사(CSRF)가
   // 항상 실패해 폼 발행이 403으로 막힌다. 발행은 비밀번호로 보호되므로 꺼도 안전.
   security: { checkOrigin: !isPi },
 
-  adapter: isPi ? node({ mode: 'standalone' }) : netlify(),
+  adapter: isPi ? node({ mode: 'standalone' }) : vercel(),
 });
