@@ -2,6 +2,7 @@
 title: "리듬게임 1일차"
 description: "리듬게임 말들기 1일차"
 pubDate: "2026-07-05T12:58:32.381Z"
+updatedDate: "2026-08-21T15:41:53.076Z"
 heroImage: "/images/1783256312378-83t1p8.png"
 category: "개발"
 ---
@@ -16,3 +17,6 @@ https://www.youtube.com/watch?v=6mY0Adr-Fxc
 롱노트는 1개임
 https://blog.tail12be3b.ts.net:8443/
 에서 함
+
+(최신)
+지금은 버려졌어요! 여러분 쏘리~ 라즈베리 파이 게임기 os구울때 백업 안됐나봄 하지만 중요한거 아님
