@@ -2,6 +2,7 @@
 title: "이런 버그"
 description: "이런 버그"
 pubDate: "2026-08-21T15:21:58.628Z"
+updatedDate: "2026-08-21T15:32:14.618Z"
 heroImage: "/images/1787325718164-qrm0fw.png"
 category: "개발"
 ---
@@ -13,3 +14,4 @@ category: "개발"
 **원인찾음**
 senser.temperture()를 써야하는데 휴머니티(습도)를 받고있었음
 ㅋㅋㅋㅋㅋㅋㅋㅋㅋ
+원래 코딩할땐 이런일이 많습니다.
